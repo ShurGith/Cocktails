@@ -1,18 +1,41 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useAppStore } from "../stores/useAppStore";
 
 
 export default function Header() {
-   const { pathname } =  useLocation();;
+   const [searchFiletrs, setSearchFilters] = useState({
+      ingredient: '',
+      category: '',
+   });
+   const { pathname } =  useLocation();
    const isHome = useMemo(() => pathname === '/', [pathname]);
    const fetchCategories = useAppStore((state) => state.fetchCategories);
    const categories = useAppStore((state) => state.categories);
-
+   const searchRecipes = useAppStore((state) => state.searchRecipes);
+   const showNotification = useAppStore((state) => state.showNotification)
 
    useEffect(() => {
       fetchCategories();
    }, [])
+
+   const handleChange = (e : ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+      setSearchFilters({ ...searchFiletrs, [e.target.name]: e.target.value })
+   };
+
+   const handleSubmit = (e : FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+
+      //validar que no esten vacios los campos
+      if(Object.values(searchFiletrs).some(field => field.trim().length <= 0)){
+         showNotification({
+            text:'Todos los campos son obligatorios',
+            error:true,
+         });
+         return;
+      }
+      searchRecipes(searchFiletrs)
+   }
 
    return (
       <header className={isHome ?  " bg-[url(/bg.jpg)] bg-cover bg-no-repeat" : "bg-slate-800"}>
@@ -28,16 +51,22 @@ export default function Header() {
             </div>
             {isHome && (
                <div >
-                  <form className="md:w-1/2 2xl:w-1/3 bg-orange-400 my-32 p-10 rounded-lg shadow space-y-6">
+                  <form className="md:w-1/2 2xl:w-1/3 bg-orange-400 my-32 p-10 rounded-lg shadow space-y-6"
+                  onSubmit={handleSubmit}
+                  >
                      <div className="space-y-4">
                         <label htmlFor="ingredient"
                            className='block text-white uppercase font-extrabold text-lg'
                         >Nombre o Ingredientes</label>
-                        <input type="text"
+                        <input 
+                           type="text"
                            className='p-3 w-full rounded-lg focus:outline-none bg-white text-gray-600'
                            id="ingredient"
                            name="ingredient"
-                           placeholder="Nombre o Ingrediente. Ej. Gin, Vodka, Tequila.." />
+                           placeholder="Nombre o Ingrediente. Ej. Gin, Vodka, Tequila.." 
+                           onChange = {handleChange}
+                           value={searchFiletrs.ingredient}
+                           />
                      </div>
                      <div className="space-y-4">
                         <label htmlFor="category"
@@ -46,7 +75,9 @@ export default function Header() {
                         <select
                            className='p-3 w-full rounded-lg focus:outline-none bg-white text-gray-600' 
                            id="category"
-                           name="category" >
+                           name="category" 
+                           onChange = {handleChange}
+                           value={searchFiletrs.category} >
                            <option value="">--Selecciona una categoría--</option>
                            {categories.drinks.map(category => (
                               <option key={category.strCategory} 
